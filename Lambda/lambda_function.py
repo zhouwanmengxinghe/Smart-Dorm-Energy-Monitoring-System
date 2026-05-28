@@ -111,13 +111,6 @@ def log_alert_to_history(item):
 def update_device_shadow(is_overload):
     """
     Publish a power_cutoff command to the IoT device shadow.
-
-    IMPORTANT: Only the "desired" section is written here.
-    The "reported" section belongs to the device — it confirms
-    execution by publishing to shadow/update after acting on
-    the desired state.  If the Lambda also wrote "reported",
-    it would overwrite the device's confirmation and break
-    shadow delta delivery.
     """
     try:
         shadow_payload = {
@@ -143,14 +136,12 @@ def publish_metrics(voltage, current, power, is_overload, threshold):
 
     Namespace: SmartDorm/EnergyMetrics
     Metrics published:
-      - Power      (Watts)
-      - Current    (Amps)
-      - Voltage    (Volts)
-      - Overload   (1 = overload, 0 = normal)
-      - Threshold  (Watts)
-
+       Power      
+       Current    
+       Voltage    
+       Overload   (1 = overload, 0 = normal)
+       Threshold  
     These metrics appear in the CloudWatch Dashboard and can trigger
-    CloudWatch Alarms independently of the SNS email path.
     """
     try:
         cloudwatch.put_metric_data(
@@ -211,14 +202,10 @@ def lambda_handler(event, context):
         power = event['power']
         threshold = get_overload_threshold()
 
-        # ── Zero-reading guard ───────────────────────────────────
+        # Zero-reading guard:
         # When the device cuts power, it publishes (0V, 0A, 0W).
-        # If we re-evaluate (0W > threshold) → False, we'd undo the
-        # cutoff before the user has a chance to fix the root cause,
-        # creating a rapid on/off cycle.  Instead, when we see a
-        # zero reading, maintain the existing cutoff state.
         # The cutoff is ONLY lifted when the user raises the threshold
-        # via the web dashboard → UpdateAlertThreshold Lambda.
+        # via the web dashboard -> UpdateAlertThreshold Lambda.
         is_device_cutoff = (voltage < 1.0 and current < 1.0 and power < 1.0)
         if is_device_cutoff:
             # Read the current shadow to check whether it's in cutoff
@@ -245,7 +232,6 @@ def lambda_handler(event, context):
                     })
                 }
 
-        # ── Normal overload evaluation ──────────────────────────
         is_overload = power > threshold
 
         # Build DynamoDB item

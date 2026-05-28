@@ -126,7 +126,7 @@ def lambda_handler(event, context):
         body = json.loads(event.get('body', '{}'))
         threshold = body.get('threshold')
 
-        # ── Validation ──────────────────────────────────────────
+        # Validation 
         if threshold is None:
             return {
                 'statusCode': 400,
@@ -156,14 +156,14 @@ def lambda_handler(event, context):
                 })
             }
 
-        # ── Persist threshold ───────────────────────────────────
+        #  Persist threshold
         settings_table.put_item(Item={
             'settingId': 'overload_threshold',
             'value': Decimal(str(threshold))
         })
         print(f"Overload threshold saved: {threshold}W")
 
-        # ── Re-evaluate latest reading against new threshold ────
+        # Re-evaluate latest reading against new threshold
         latest = get_latest_data()
         is_overload = False
 

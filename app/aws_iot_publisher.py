@@ -1,5 +1,5 @@
 """
-aws_iot_publisher.py — Raspberry Pi device simulator with shadow-driven power cutoff.
+Yifu Hou -23009975
 
 This script does two things concurrently:
   1. Publishes simulated electricity data to dorm/electricity/data every 30 s.
@@ -25,34 +25,33 @@ import time
 import random
 from datetime import datetime, timezone
 
-# ── AWS IoT configuration ────────────────────────────────────
+# AWS IoT configuration 
 AWS_IOT_ENDPOINT = "a39kbv9e3eocr6-ats.iot.ap-southeast-2.amazonaws.com"
 MQTT_TOPIC = "dorm/electricity/data"
 THING_NAME = "DormRaspberryPi"
 SHADOW_NAME = "dorm_energy_shadow"
 CLIENT_ID = "DormRaspberryPi"
 
-# Shadow MQTT topics — named shadow "dorm_energy_shadow"
+# Shadow MQTT topics 
 SHADOW_BASE = f"$aws/things/{THING_NAME}/shadow/name/{SHADOW_NAME}"
 SHADOW_DELTA_TOPIC = f"{SHADOW_BASE}/update/delta"
 SHADOW_UPDATE_TOPIC = f"{SHADOW_BASE}/update"
 SHADOW_GET_TOPIC = f"{SHADOW_BASE}/get"
 SHADOW_GET_ACCEPTED = f"{SHADOW_BASE}/get/accepted"
 
-# Certificate files (must be in the same directory)
+# Certificate files
 CA_FILE = "AmazonRootCA1.pem"
 CERT_FILE = "0f8e11dc7ac80bdd343891acb47d25d8a57b44e79950a5852a7f77dfb16d2797-certificate.pem.crt"
 KEY_FILE = "0f8e11dc7ac80bdd343891acb47d25d8a57b44e79950a5852a7f77dfb16d2797-private.pem.key"
 
-# ── Global state ─────────────────────────────────────────────
+# Global state 
 power_cutoff = False     # True when the shadow commands a power cut
 cumulative_energy = 0.0  # simulated kWh accumulator
 shadow_version = 0       # latest shadow version for optimistic locking
 
 
-# ═══════════════════════════════════════════════════════════════
+
 #  Shadow helpers
-# ═══════════════════════════════════════════════════════════════
 
 def report_shadow_state(client, cutoff, reason=""):
     """
@@ -82,11 +81,7 @@ def report_shadow_state(client, cutoff, reason=""):
 def request_shadow_state(client):
     """Ask IoT Core for the current full shadow document."""
     client.publish(SHADOW_GET_TOPIC, "", qos=1)
-
-
-# ═══════════════════════════════════════════════════════════════
 #  MQTT callbacks
-# ═══════════════════════════════════════════════════════════════
 
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
@@ -105,7 +100,7 @@ def on_message(client, userdata, msg):
     try:
         payload = json.loads(msg.payload.decode())
 
-        # ── Shadow delta: cloud wants us to change state ──────────
+        # Shadow delta: cloud wants us to change state 
         if msg.topic == SHADOW_DELTA_TOPIC:
             print(f"\nShadow delta received: {json.dumps(payload, indent=2)}")
 
@@ -126,7 +121,7 @@ def on_message(client, userdata, msg):
                 print(f"Shadow delta already in sync (power_cutoff={power_cutoff})")
                 report_shadow_state(client, power_cutoff, "State already in sync")
 
-        # ── Full shadow doc (startup sync) ───────────────────────
+        #  Full shadow doc (startup sync)
         elif msg.topic == SHADOW_GET_ACCEPTED:
             state = payload.get("state", {})
             reported = state.get("reported", {})
@@ -157,15 +152,14 @@ def on_publish(client, userdata, mid):
     pass
 
 
-# ═══════════════════════════════════════════════════════════════
+
 #  Data publisher (runs in the main loop)
-# ═══════════════════════════════════════════════════════════════
+
 
 def publish_sensor_data(client):
     """
     Generate and publish simulated electricity readings.
-    When power_cutoff is True, publish zeroed-out readings to reflect
-    that power has been physically disconnected.
+    When power_cutoff is True, publish zeroed-out readings to reflect that power has been physically disconnected.
     """
     global cumulative_energy
 
@@ -192,9 +186,7 @@ def publish_sensor_data(client):
     print(f"{status}  {voltage}V | {current}A | {power}W | {cumulative_energy:.4f}kWh")
 
 
-# ═══════════════════════════════════════════════════════════════
-#  Main
-# ═══════════════════════════════════════════════════════════════
+#  Main function
 
 def main():
     print("=" * 50)
