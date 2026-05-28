@@ -15,13 +15,13 @@ Layer 1 - DEVICE (Raspberry Pi)
   - Simulates relay power cutoff when overload detected
 
 Layer 2 - CLOUD (AWS)
-  IoT Core      - MQTT Broker, Device Shadow (dorm_energy_shadow)
-  Lambda        - 5 serverless functions (data processing + API handlers)
-  DynamoDB      - 3 tables: DormElectricData, DormSystemSettings, DormAlertHistory
-  API Gateway   - 4 REST endpoints: /data, /threshold, /simulate, /alerts
-  Cognito       - Hosted UI OAuth 2.0 login (FORCE_CHANGE_PASSWORD built-in)
-  SNS           - Email overload alerts to dorm staff
-  CloudWatch    - Custom metrics (SmartDorm/EnergyMetrics) + Dashboard
+  - IoT Core       MQTT Broker, Device Shadow (dorm_energy_shadow)
+  - Lambda         5 serverless functions (data processing + API handlers)
+  - DynamoDB       3 tables: DormElectricData, DormSystemSettings, DormAlertHistory
+  - API Gateway    4 REST endpoints: /data, /threshold, /simulate, /alerts
+  - Cognito        Hosted UI OAuth 2.0 login (FORCE_CHANGE_PASSWORD built-in)
+  - SNS            Email overload alerts to dorm staff
+  - CloudWatch     Custom metrics (SmartDorm/EnergyMetrics) + Dashboard
 
 Layer 3 - FRONTEND (Browser)
   React 18 + Vite + Tailwind CSS
@@ -30,7 +30,6 @@ Layer 3 - FRONTEND (Browser)
 Data Flow: Device -> MQTT -> IoT Core -> Lambda -> DynamoDB + SNS + CloudWatch
 Web Flow:  Browser -> Cognito Login -> API Gateway -> Lambda -> DynamoDB
 
-Full Mermaid diagram: docs/architecture-diagram.md (paste on mermaid.live)
 
 ---
 
