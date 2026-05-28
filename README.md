@@ -1,146 +1,101 @@
-# Smart Dorm Energy Monitoring System (智能宿舍用电监控系统)
+# Smart Dorm Energy Monitoring System
 
 An IoT + Cloud integrated solution for real-time dormitory electricity monitoring,
-overload detection, and automatic power cutoff. Built on **AWS IoT Core + Lambda +
-DynamoDB + Cognito + API Gateway**, with a React-based web dashboard.
+overload detection, and automatic power cutoff. Built on AWS IoT Core + Lambda +
+DynamoDB + Cognito + API Gateway, with a React-based web dashboard.
 
 ---
 
 ## System Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                       DEVICE LAYER (Raspberry Pi)                    │
-│                                                                      │
-│  aws_iot_publisher.py                                                │
-│  ┌──────────────────────────────────────────────────────┐           │
-│  │  • Publishes simulated sensor data every 30s          │           │
-│  │    (Voltage / Current / Power / Cumulative Energy)    │           │
-│  │  • Subscribes to device shadow delta                  │           │
-│  │  • Simulates relay power cutoff when commanded        │           │
-│  └──────────────────┬───────────────────────────────────┘           │
-└─────────────────────┼───────────────────────────────────────────────┘
-                      │ MQTT (TLS 1.2, port 8883)
-                      ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                    AWS CLOUD LAYER                                    │
-│                                                                      │
-│  ┌──────────────┐     ┌─────────────────────────────────────┐       │
-│  │  API Gateway  │────▶│  Lambda (lambda_function.py)         │       │
-│  │  /data  GET   │     │  • Validates incoming data           │       │
-│  │  /threshold   │     │  • Reads dynamic threshold           │       │
-│  │       PUT     │     │  • Checks overload                   │       │
-│  │  /simulate    │     │  • Updates device shadow             │       │
-│  │       POST    │     │  • Sends SNS alerts                  │       │
-│  │  /alerts GET  │     │  • Publishes CloudWatch metrics      │       │
-│  └──────┬───────┘     └───┬──────────┬──────────┬────────────┘       │
-│         │                 │          │          │                    │
-│         ▼                 ▼          ▼          ▼                    │
-│  ┌──────────┐   ┌──────────┐  ┌────────┐  ┌──────────────┐         │
-│  │ Cognito  │   │DynamoDB  │  │  SNS   │  │CloudWatch    │         │
-│  │ Hosted UI│   │          │  │ Email  │  │Dashboard     │         │
-│  │          │   │ DormElec │  │Alerts  │  │              │         │
-│  │ OAuth 2.0│   │ tricData │  │        │  │SmartDorm/    │         │
-│  │          │   │ DormSyst │  │        │  │EnergyMetrics │         │
-│  │          │   │ emSettin │  └────────┘  └──────────────┘         │
-│  │          │   │ gs       │                                        │
-│  │          │   │ DormAler │                                         │
-│  │          │   │ tHistory │                                         │
-│  └──────────┘   └──────────┘                                         │
-│                                                                      │
-│                    ┌──────────────┐                                  │
-│                    │  IoT Core     │                                 │
-│                    │              │                                  │
-│                    │ MQTT Broker  │                                  │
-│                    │ Device       │                                  │
-│                    │ Shadow       │                                  │
-│                    │ dorm_energy  │                                  │
-│                    │ _shadow      │                                  │
-│                    └──────────────┘                                  │
-└─────────────────────────────────────────────────────────────────────┘
-                      │ HTTPS
-                      ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                    FRONTEND (React + Vite + Tailwind)                 │
-│                                                                      │
-│  ┌──────────────────────────────────────────────────┐               │
-│  │  LandingPage → Cognito Hosted UI Login            │               │
-│  │                                                    │               │
-│  │  ┌─────────────┐  ┌──────────┐  ┌──────────┐     │               │
-│  │  │ Dashboard   │  │Simulator │  │ Settings  │     │               │
-│  │  │             │  │          │  │           │     │               │
-│  │  │ Charts      │  │ Power    │  │Threshold  │     │               │
-│  │  │ Stats Cards │  │Current   │  │ Presets   │     │               │
-│  │  │ Analytics   │  │Voltage   │  │Overload   │     │               │
-│  │  │ Data Table  │  │Scenarios │  │Warning    │     │               │
-│  │  └─────────────┘  └──────────┘  └──────────┘     │               │
-│  │                                                    │               │
-│  │  ┌─────────────┐                                  │               │
-│  │  │Alert History│   Sidebar + Mobile Bottom Nav    │               │
-│  │  │             │   Header + User Menu (Sign Out)  │               │
-│  │  │Data Table   │   ErrorBoundary (no blank pages) │               │
-│  │  └─────────────┘                                  │               │
-│  └──────────────────────────────────────────────────┘               │
-└─────────────────────────────────────────────────────────────────────┘
-```
+Three-layer architecture:
+
+  [DEVICE LAYER]  Raspberry Pi running aws_iot_publisher.py
+       |          Publishes simulated sensor data every 30s
+       |          Subscribes to shadow delta for power_cutoff
+       |
+       |  MQTT (TLS 1.2, port 8883)
+       v
+  [CLOUD LAYER]  AWS Services
+       |
+       |  IoT Core      -- MQTT Broker + Device Shadow (dorm_energy_shadow)
+       |  Lambda        -- Data processing + API handlers (5 functions)
+       |  DynamoDB      -- DormElectricData / DormSystemSettings / DormAlertHistory
+       |  API Gateway   -- /data /threshold /simulate /alerts
+       |  Cognito       -- Hosted UI OAuth 2.0 login
+       |  SNS           -- Email overload alerts
+       |  CloudWatch    -- Custom metrics + Dashboard
+       |
+       |  HTTPS
+       v
+  [FRONTEND]  React + Vite + Tailwind CSS
+       |
+       |  LandingPage  -- "Sign In with AWS Cognito"
+       |  Dashboard    -- Charts, stats, analytics, data table
+       |  Simulator    -- Custom parameter test tool
+       |  AlertHistory -- Overload event records
+       |  Settings     -- Threshold control + cutoff flow
+
+Diagram code for mermaid.live: see docs/architecture-diagram.md
 
 ---
 
-## Project Structure
+## Project Files
 
 ```
 AS2/
-├── README.md                          # This file
-├── Lambda/                            # AWS Lambda functions (Python 3.x)
-│   ├── lambda_function.py             # Main IoT data processor
-│   ├── GetElectricityData.py          # GET /data — query recent readings
-│   ├── UpdateAlertThreshold.py        # PUT /threshold — save + re-evaluate
-│   ├── SimulateDeviceData.py          # POST /simulate — publish test data
-│   └── GetAlertHistory.py             # GET /alerts — overload event log
-├── app/                               # Raspberry Pi device simulator
-│   └── aws_iot_publisher.py           # MQTT publisher + shadow subscriber
-├── dorm-energy-frontend/              # React SPA (Vite + Tailwind CSS)
-│   ├── index.html
-│   ├── package.json
-│   ├── vite.config.js
-│   ├── tailwind.config.js
-│   ├── postcss.config.js
-│   └── src/
-│       ├── main.jsx                   # Entry point + React mount
-│       ├── App.jsx                    # Root component + auth gate
-│       ├── config.js                  # API & Cognito constants
-│       ├── api.js                     # Axios wrapper (4 endpoints)
-│       ├── auth.js                    # Cognito OAuth code flow
-│       ├── index.css                  # Tailwind + custom scrollbar
-│       └── components/
-│           ├── ErrorBoundary.jsx      # React error boundary
-│           ├── LandingPage.jsx        # "Sign In with Cognito" entry
-│           ├── Header.jsx             # Top bar + user menu + logout
-│           ├── Sidebar.jsx            # Desktop sidebar navigation
-│           ├── MobileNav.jsx          # Mobile bottom tab bar
-│           ├── Dashboard.jsx          # Charts + stats + analytics + table
-│           ├── Simulator.jsx          # Custom telemetry test tool
-│           ├── Alerts.jsx             # Overload history table
-│           └── Settings.jsx           # Threshold management + cutoff flow
-└── reference/                         # Research papers (PDFs)
+  README.md
+  Lambda/
+    lambda_function.py              Main data processor
+    GetElectricityData.py           GET /data
+    UpdateAlertThreshold.py         PUT /threshold + shadow update
+    SimulateDeviceData.py           POST /simulate
+    GetAlertHistory.py              GET /alerts
+  app/
+    aws_iot_publisher.py            Device simulator (MQTT + shadow)
+  dorm-energy-frontend/
+    index.html
+    package.json
+    vite.config.js
+    tailwind.config.js
+    postcss.config.js
+    src/
+      main.jsx                      Entry point
+      App.jsx                       Root component + auth gate
+      config.js                     API & Cognito constants
+      api.js                        Axios wrapper
+      auth.js                       Cognito OAuth code flow
+      index.css
+      components/
+        ErrorBoundary.jsx           Catches render errors
+        LandingPage.jsx             Welcome + Sign In button
+        Header.jsx                  Top bar + user menu + logout
+        Sidebar.jsx                 Desktop navigation
+        MobileNav.jsx               Mobile bottom tabs
+        Dashboard.jsx               Charts + stats + analytics
+        Simulator.jsx               Custom telemetry test
+        Alerts.jsx                  Overload history table
+        Settings.jsx                Threshold + cutoff flow
+  docs/
+    architecture-diagram.md         Mermaid code for system diagram
+    report-continuation.md          Report chapters 2-9
+  reference/                        Research papers
 ```
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| Device | Python + paho-mqtt | MQTT data publishing, shadow subscription |
-| Communication | MQTT (TLS 1.2) | Bidirectional IoT messaging |
-| API | AWS API Gateway | REST endpoints for frontend |
-| Compute | AWS Lambda (Python 3.x) | Serverless data processing |
-| Storage | AWS DynamoDB | NoSQL for sensor data, settings, alerts |
-| Auth | AWS Cognito Hosted UI | OAuth 2.0 authorization code flow |
-| Messaging | AWS SNS | Email overload alerts |
-| Monitoring | AWS CloudWatch | Custom metrics + dashboard |
-| Device Mgmt | AWS IoT Core | MQTT broker + device shadow |
-| Frontend | React 18 + Vite + Tailwind | SPA with charts (Chart.js) + Axios |
+- Device:        Python + paho-mqtt (MQTT publishing + shadow subscription)
+- Communication: MQTT (TLS 1.2, port 8883)
+- API:           AWS API Gateway (REST, 4 endpoints)
+- Compute:       AWS Lambda (Python 3.9, serverless)
+- Storage:       AWS DynamoDB (NoSQL, 3 tables)
+- Auth:          AWS Cognito Hosted UI (OAuth 2.0 authorization code grant)
+- Messaging:     AWS SNS (email overload alerts)
+- Monitoring:    AWS CloudWatch (custom metrics + dashboard)
+- Device Mgmt:   AWS IoT Core (MQTT broker + named shadow)
+- Frontend:      React 18 + Vite + Tailwind CSS + Chart.js + Axios
 
 ---
 
@@ -150,113 +105,116 @@ AS2/
 
 - Node.js 18+ and npm
 - Python 3.9+ and pip
-- AWS account with configured:
-  - Cognito User Pool + App Client (Hosted UI enabled)
-  - IoT Core Thing + certificates
-  - DynamoDB tables (created automatically by Lambda)
-  - Lambda functions deployed
-  - API Gateway routes configured
-  - IAM roles with required policies
+- AWS account with: Cognito User Pool, IoT Core Thing + certificates,
+  Lambda functions deployed, API Gateway routes, IAM roles
 
-### 1. Frontend
+### Frontend
 
-```bash
+```
 cd dorm-energy-frontend
 npm install
-npm run dev       # http://localhost:5173
-npm run build     # production build → dist/
+npm run dev          # http://localhost:5173
+npm run build        # production -> dist/
 ```
 
-### 2. Device Simulator
+### Device Simulator
 
-```bash
+```
 cd app
 pip install paho-mqtt
 python aws_iot_publisher.py
 ```
 
-### 3. Lambda Deployment
+### Lambda Deployment
 
-1. Open each `.py` file in `Lambda/` in the AWS Lambda Console
-2. Set Runtime to Python 3.9+
-3. Adjust timeout to 30 seconds
-4. Click **Deploy**
+1. Open each .py file in Lambda/ in AWS Lambda Console
+2. Set Runtime: Python 3.9+
+3. Set Timeout: 30 seconds
+4. Click Deploy
 
-### 4. Cognito App Client Configuration
+### Cognito Hosted UI Configuration
 
-In AWS Console → Cognito → App Client → Hosted UI:
+AWS Console -> Cognito -> App Client -> Hosted UI:
 
-| Setting | Value |
-|---------|-------|
-| Allowed Callback URLs | `http://localhost:5173` |
-| Allowed Sign-out URLs | `http://localhost:5173` |
-| OAuth Grant Types | Authorization code grant |
-| OAuth Scopes | email, openid, phone |
+- Allowed Callback URLs:  http://localhost:5173
+- Allowed Sign-out URLs:  http://localhost:5173
+- OAuth Grant Types:      Authorization code grant
+- OAuth Scopes:           email, openid, phone
 
 ---
 
 ## API Reference
 
-All endpoints are proxied through **API Gateway** at:
-```
-https://n9lxkwwoch.execute-api.ap-southeast-2.amazonaws.com/dev
-```
+Base URL: https://n9lxkwwoch.execute-api.ap-southeast-2.amazonaws.com/dev
 
-| Method | Path | Description | Body / Params |
-|--------|------|-------------|---------------|
-| `GET` | `/data` | Recent electricity readings | `?limit=100` |
-| `PUT` | `/threshold` | Update overload threshold | `{ "threshold": 3000 }` |
-| `POST` | `/simulate` | Publish test telemetry | `{ "power": 800 }` or `{ "current": 10, "voltage": 230 }` |
-| `GET` | `/alerts` | Overload event history | `?limit=50` |
-
----
-
-## Key Features
-
-- **Real-time Dashboard**: Power/Current/Voltage charts (Chart.js), analytics cards, data table with 15-second auto-refresh
-- **Overload Detection**: Configurable threshold, automatic SNS email alerts, IoT shadow `power_cutoff` command
-- **Power Cutoff**: Web threshold change → Lambda → Device Shadow → Raspberry Pi relay simulation
-- **Simulator**: Manual telemetry injection for testing overload scenarios
-- **Cloud Analytics**: CloudWatch custom metrics (SmartDorm/EnergyMetrics) + Dashboard with 4+ widgets
-- **Auth**: Cognito Hosted UI OAuth — zero SDK dependencies, full FORCE_CHANGE_PASSWORD support
-- **Responsive UI**: Sidebar on desktop, bottom tab bar on mobile; ErrorBoundary prevents blank pages
+GET  /data       ?limit=100  -> Recent electricity readings
+PUT  /threshold  {threshold} -> Update overload threshold
+POST /simulate   {power} or {current,voltage} -> Publish test data
+GET  /alerts     ?limit=50   -> Overload event history
 
 ---
 
 ## DynamoDB Tables
 
-| Table | Partition Key | Sort Key | Purpose |
-|-------|--------------|----------|---------|
-| `DormElectricData` | `deviceId` | `timestamp` | Sensor readings |
-| `DormSystemSettings` | `settingId` | — | Overload threshold |
-| `DormAlertHistory` | `alertId` | — | Overload event log |
+DormElectricData   PK: deviceId  SK: timestamp  (sensor readings)
+DormSystemSettings  PK: settingId                (overload_threshold)
+DormAlertHistory    PK: alertId                  (overload events)
 
 ---
 
 ## MQTT Topics
 
-| Topic | Direction | Purpose |
-|-------|-----------|---------|
-| `dorm/electricity/data` | Device → Cloud | Sensor telemetry |
-| `$aws/things/DormRaspberryPi/shadow/name/dorm_energy_shadow/update/delta` | Cloud → Device | Power cutoff commands |
-| `$aws/things/DormRaspberryPi/shadow/name/dorm_energy_shadow/update` | Device → Cloud | Cutoff confirmation |
+dorm/electricity/data                               Device -> Cloud  (telemetry)
+$aws/things/DormRaspberryPi/shadow/name/
+  dorm_energy_shadow/update/delta                   Cloud -> Device  (cutoff cmd)
+$aws/things/DormRaspberryPi/shadow/name/
+  dorm_energy_shadow/update                         Device -> Cloud  (confirmation)
+
+---
+
+## Key Features
+
+- Dashboard: Power/Current/Voltage charts, stats cards, analytics row,
+  data table, 15s auto-refresh, overload red banner
+- Overload Detection: Configurable threshold, SNS email, IoT shadow cutoff
+- Power Cutoff: Web -> threshold change -> Lambda -> Device Shadow ->
+  Raspberry Pi relay simulation
+- Simulator: Manual telemetry injection, 3 quick scenarios, custom params
+- Cloud Analytics: CloudWatch metrics (SmartDorm/EnergyMetrics) + Dashboard
+- Auth: Cognito Hosted UI OAuth, no SDK, FORCE_CHANGE_PASSWORD built-in
+- Responsive: Sidebar on desktop, bottom tabs on mobile
+- ErrorBoundary: Catches render errors -> shows reload page (never blank)
 
 ---
 
 ## Troubleshooting
 
-| Problem | Likely Cause | Fix |
-|---------|-------------|-----|
-| Blank page on localhost:5173 | Vite cache corruption | `rm -rf node_modules/.vite && npm run dev` |
-| "Invalid request" on login | Callback URL not in App Client | Add `http://localhost:5173` to Cognito Allowed Callback URLs |
-| "Invalid request" on logout | Logout URL not in App Client | Add `http://localhost:5173` to Cognito Allowed Sign-out URLs |
-| MQTT connection failed | Wrong certificate path | Verify `CA_FILE`, `CERT_FILE`, `KEY_FILE` paths in `aws_iot_publisher.py` |
-| Shadow delta not received | Named shadow topic mismatch | Ensure topics use `/name/dorm_energy_shadow/` segment |
-| CloudWatch metrics not found | IAM missing `cloudwatch:PutMetricData` | Add inline policy to Lambda execution role |
-| Simulator shows wrong values | Lambda doesn't read current/voltage | Ensure latest `SimulateDeviceData.py` is deployed |
+Blank page on localhost
+  -> rm -rf node_modules/.vite && npm run dev
+
+"Invalid request" on Cognito Login
+  -> Add http://localhost:5173 to Allowed Callback URLs in Cognito Console
+
+"Invalid request" on Logout
+  -> Add http://localhost:5173 to Allowed Sign-out URLs in Cognito Console
+
+MQTT connection failed
+  -> Check CA_FILE, CERT_FILE, KEY_FILE paths in aws_iot_publisher.py
+
+Shadow delta not received by device
+  -> Confirm topics use /name/dorm_energy_shadow/ segment (named shadow)
+
+CloudWatch metrics not appearing
+  -> Add cloudwatch:PutMetricData to Lambda IAM role
+
+Simulator shows random values instead of input
+  -> Deploy latest SimulateDeviceData.py (supports current/voltage params)
+
+Dashboard threshold line doesn't update
+  -> Deploy latest Settings.jsx (calls localStorage.setItem on save)
 
 ---
 
 ## License
 
-Academic project — Smart Dorm EnergyGuard, 2026.
+Academic project - Smart Dorm EnergyGuard, 2026.
