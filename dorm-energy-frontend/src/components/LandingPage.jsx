@@ -1,6 +1,6 @@
 /**
  * LandingPage — Shown when the user is not authenticated.
- *
+ * Yifu Hou -23009975
  * Renders a branded welcome screen with a single "Sign In with AWS Cognito"
  * button that links to the Cognito Hosted UI /login endpoint.
  *

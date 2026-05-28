@@ -1,3 +1,27 @@
+
+"""
+UpdateAlertThreshold.py — API handler for PUT /threshold.
+Yifu Hou -23009975
+Triggered by: API Gateway (PUT /dev/threshold).
+Role: Persist a new overload threshold to DynamoDB, then re-evaluate
+      the latest power reading against the new threshold.
+
+Pipeline:
+  1. Validate threshold (must be > 0).
+  2. Save to DormSystemSettings (settingId = "overload_threshold").
+  3. Query the latest reading from DormElectricData.
+  4. Compare power vs. new threshold → is_overload.
+  5. Update IoT device shadow (desired.power_cutoff).
+  6. If overloaded: send SNS email + log to DormAlertHistory.
+
+This Lambda is the manual reset mechanism: raising the threshold
+above the current power level sets power_cutoff=false, restoring
+normal device operation.
+
+IAM Policies: AWSLambdaBasicExecutionRole, AmazonDynamoDBFullAccess,
+              AWSIoTDataAccess, AmazonSNSFullAccess.
+"""
+
 import json
 import boto3
 from decimal import Decimal

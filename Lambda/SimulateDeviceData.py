@@ -1,3 +1,23 @@
+
+
+"""
+SimulateDeviceData.py — API handler for POST /simulate.
+Yifu Hou -23009975
+Triggered by: API Gateway (POST /dev/simulate).
+Role: Publish simulated device telemetry to AWS IoT Core MQTT
+      (topic dorm/electricity/data) for testing overload scenarios.
+
+Input modes (priority order):
+  1. power provided → use it, calculate current = power / voltage.
+  2. current (+ voltage) provided → use them, calculate power = V × I.
+  3. Nothing provided → generate random values (228–232V, 0.5–4.5A).
+
+The main Lambda (lambda_function.py) picks up the MQTT message via
+IoT Core rule and runs the full processing pipeline.
+
+IAM Policies: AWSLambdaBasicExecutionRole, AWSIoTDataAccess.
+"""
+
 import json
 import boto3
 import random

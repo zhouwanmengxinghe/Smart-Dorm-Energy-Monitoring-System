@@ -1,6 +1,6 @@
 /**
  * Settings — System configuration page.
- *
+ * Yifu Hou -23009975
  * Supports one setting: the overload power threshold.
  *
  * The threshold is persisted to DynamoDB (DormSystemSettings table)

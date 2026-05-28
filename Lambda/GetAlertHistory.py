@@ -1,3 +1,18 @@
+
+"""
+GetAlertHistory.py — API handler for GET /alerts.
+Yifu Hou -23009975
+Triggered by: API Gateway (GET /dev/alerts?limit=N).
+Role: Scan DormAlertHistory for the most recent overload events,
+      sort by timestamp descending, return as JSON.
+
+Response: { success: true, count: N, data: [...] }
+Each record: alertId, timestamp, deviceId, power, voltage, current,
+             threshold, type ("overload").
+
+IAM Policies: AWSLambdaBasicExecutionRole, AmazonDynamoDBFullAccess.
+"""
+
 import json
 import boto3
 from decimal import Decimal

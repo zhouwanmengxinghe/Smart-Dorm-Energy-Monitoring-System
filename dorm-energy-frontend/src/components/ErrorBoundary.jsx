@@ -1,13 +1,6 @@
 /**
  * ErrorBoundary — React class component that catches render-phase errors.
- *
- * Wraps every logical sub-tree (landing page, each dashboard page, the
- * authenticated layout) so that a single component crash never produces
- * a blank white screen. When an error is caught the boundary renders a
- * styled fallback with a "Reload Page" button.
- *
- * Uses the legacy class-component API because React still only supports
- * error boundaries via componentDidCatch / getDerivedStateFromError.
+ * Yifu Hou -23009975
  */
 
 import React from 'react';

@@ -1,6 +1,7 @@
 /**
  * App.jsx — Root component: authentication gate + page router.
- *
+ * Yifu Hou -23009975
+ * 
  * Authentication model:
  *   1. On mount, check the URL for ?code= (Cognito callback).
  *      If present, exchange the code for tokens via Auth.exchangeCodeForTokens.
@@ -32,7 +33,7 @@ export default function App() {
   // Current active page in the dashboard sidebar
   const [page, setPage] = useState('dashboard');
 
-  // ── Auth initialisation ──────────────────────────────────────
+  //  Auth initialisation 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
@@ -53,7 +54,7 @@ export default function App() {
       .catch(() => setAuth({ checked: true, user: null }));
   }, []);
 
-  // ── Logout handler ───────────────────────────────────────────
+  // Logout handler 
   // Clear local tokens, then redirect to Cognito /logout to also
   // clear the Cognito session cookie. Cognito redirects back to our
   // landing page, where the user will see the "Sign In" button again.
@@ -62,7 +63,7 @@ export default function App() {
     window.location.href = getLogoutUrl();
   };
 
-  // ── Loading state ────────────────────────────────────────────
+  //Loading state 
   if (!auth.checked) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -77,7 +78,7 @@ export default function App() {
     );
   }
 
-  // ── Unauthenticated → Landing Page ───────────────────────────
+  //Unauthenticated → Landing Page 
   if (!auth.user) {
     return (
       <ErrorBoundary>
@@ -86,7 +87,7 @@ export default function App() {
     );
   }
 
-  // ── Authenticated → Dashboard layout ─────────────────────────
+  //  Authenticated → Dashboard layout
   const renderPage = () => {
     switch (page) {
       case 'dashboard': return <Dashboard />;

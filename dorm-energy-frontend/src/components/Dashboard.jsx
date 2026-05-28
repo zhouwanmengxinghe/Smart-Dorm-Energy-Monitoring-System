@@ -1,6 +1,6 @@
 /**
  * Dashboard — Real-time energy monitoring overview.
- *
+ * Yifu Hou -23009975
  * Features:
  *   - Four stat cards showing latest Power / Current / Voltage / Total Energy.
  *   - Overload warning banner: red pulsing bar when is_overload is true.
@@ -12,7 +12,6 @@
  *
  * Data is fetched via GET /data and auto-refreshed every 15 seconds.
  * All data access uses optional chaining (?.) and nullish coalescing (??)
- * so the UI degrades gracefully when the API returns empty arrays or nulls.
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -57,11 +56,16 @@ const chartOptions = {
  * so charts read left-to-right chronologically.
  */
 function chartDataFrom(items) {
-  const labels = items.map((d) => {
-    const t = d?.timestamp || '';
-    // Extract HH:MM:SS portion from ISO timestamp for compact x-axis labels
-    return t.length > 16 ? t.slice(11, 19) : t;
-  }).reverse();
+  // Convert UTC timestamp to NZ time for chart x-axis (HH:MM format)
+  function nzTimeLabel(isoStr) {
+    if (!isoStr) return '';
+    try {
+      return new Date(isoStr).toLocaleString('en-NZ', {
+        timeZone: 'Pacific/Auckland', hour: '2-digit', minute: '2-digit'
+      });
+    } catch { return isoStr.slice(11, 16); }
+  }
+  const labels = items.map((d) => nzTimeLabel(d?.timestamp)).reverse();
 
   const power  = items.map((d) => d?.power ?? 0).reverse();
   const current = items.map((d) => d?.current ?? 0).reverse();
@@ -178,6 +182,14 @@ export default function Dashboard() {
   }, [load]);
 
   // Latest reading drives the stat cards and overload banner
+  // Convert a UTC ISO timestamp to New Zealand local time for display.
+  function toNZTime(isoStr) {
+    if (!isoStr) return '--';
+    try {
+      return new Date(isoStr).toLocaleString('en-NZ', { timeZone: 'Pacific/Auckland' });
+    } catch { return isoStr; }
+  }
+
   const latest = rawData.length > 0 ? rawData[0] : null;
   const isOverload = latest?.is_overload === true;
   const { labels, power, current, voltage } = chartDataFrom(rawData);
@@ -228,7 +240,7 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* ── Analytics row — computed from all loaded data points ──── */}
+      {/*  Analytics row — computed from all loaded data points  */}
       {rawData.length > 0 && (() => {
         const powers = rawData.map(d => d?.power ?? 0);
         const avgPower = powers.reduce((a, b) => a + b, 0) / powers.length;
@@ -317,7 +329,7 @@ export default function Dashboard() {
                 {rawData.slice(0, 20).map((d, i) => (
                   // Red background row for overload events
                   <tr key={i} className={d?.is_overload ? 'bg-red-50' : 'hover:bg-gray-50'}>
-                    <td className="px-4 py-2.5 text-gray-600 whitespace-nowrap">{d?.timestamp || '--'}</td>
+                    <td className="px-4 py-2.5 text-gray-600 whitespace-nowrap text-xs">{toNZTime(d?.timestamp)}</td>
                     <td className={`px-4 py-2.5 text-right font-medium ${(d?.power ?? 0) > threshold ? 'text-red-600' : 'text-gray-700'}`}>{d?.power ?? '--'}</td>
                     <td className="px-4 py-2.5 text-right text-gray-600">{d?.current ?? '--'}</td>
                     <td className="px-4 py-2.5 text-right text-gray-600">{d?.voltage ?? '--'}</td>

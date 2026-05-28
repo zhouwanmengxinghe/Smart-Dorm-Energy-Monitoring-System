@@ -1,6 +1,6 @@
 /**
  * config.js — Central configuration for the Smart Dorm Energy Monitor.
- *
+ * Yifu Hou -23009975
  * API_BASE_URL points to the AWS API Gateway dev stage that fronts
  * four Lambda functions: GetElectricityData, UpdateAlertThreshold,
  * SimulateDeviceData, GetAlertHistory.

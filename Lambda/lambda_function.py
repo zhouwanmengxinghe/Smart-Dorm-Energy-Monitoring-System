@@ -1,3 +1,28 @@
+
+
+"""
+lambda_function.py — Core IoT data processing pipeline.
+Yifu Hou -23009975
+Triggered by: AWS IoT Core Rule (MQTT topic dorm/electricity/data).
+Role: Main backend processor for the Smart Dorm EnergyGuard system.
+
+Pipeline (8 steps per invocation):
+  1. Validate required fields (voltage, current, power, cumulative_energy).
+  2. Read dynamic overload threshold from DormSystemSettings (default 3000W).
+  3. Zero-reading guard: if device publishes (0V,0A,0W) while shadow says
+     power_cutoff=true, maintain cutoff — prevents rapid on/off cycling.
+  4. Overload evaluation: power > threshold → is_overload = True.
+  5. Persist to DormElectricData (float→Decimal conversion for DynamoDB).
+  6. Update IoT device shadow (desired.power_cutoff only — reported is
+     owned by the device).
+  7. Publish 5 custom metrics to CloudWatch (SmartDorm/EnergyMetrics).
+  8. If overload: send SNS email + log to DormAlertHistory.
+
+AWS Services Used: DynamoDB, IoT Core (device shadow), SNS, CloudWatch.
+IAM Policies: AWSLambdaBasicExecutionRole, AmazonDynamoDBFullAccess,
+              AWSIoTDataAccess, AmazonSNSFullAccess, CloudWatchFullAccess.
+"""
+
 import json
 import boto3
 import os

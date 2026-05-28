@@ -1,11 +1,5 @@
 /**
- * auth.js — AWS Cognito Hosted UI OAuth authentication.
- *
- * Architecture decision: we use Cognito's built-in Hosted UI rather than
- * a custom login form. This means:
- *   - No SDK dependency (zero npm packages for auth).
- *   - FORCE_CHANGE_PASSWORD is handled natively by Cognito.
- *   - No SRP math, no credential handling in our frontend code.
+ * Yifu Hou -23009975
  *
  * Flow:
  *   1. LandingPage renders a link to getLoginUrl().
@@ -13,23 +7,15 @@
  *   3. Cognito redirects back to REDIRECT_URI?code=xxx.
  *   4. App.jsx detects the ?code param and calls exchangeCodeForTokens().
  *   5. Tokens are stored in localStorage; the app renders the dashboard.
- *
- * Session lifecycle:
- *   - id_token expiry is checked on page load (getCurrentSession).
- *   - If expired but a refresh_token exists, we attempt a silent refresh.
- *   - If refresh fails, tokens are cleared and the user sees the landing page.
- *   - signOut() only clears local storage; the caller must redirect the
- *     browser to getLogoutUrl() to also clear the Cognito session cookie.
  */
 
 import config from './config';
 
-// Cognito OAuth 2.0 token endpoint
+
 const TOKEN_URL = `https://${config.COGNITO.DOMAIN}/oauth2/token`;
 
-/* ── JWT / storage helpers ──────────────────────────────────── */
 
-/** Decode the payload of a JWT without verification (for display only). */
+/** Decode the payload of a JWT without verification  */
 function parseJwt(token) {
   try {
     const payload = token.split('.')[1];
@@ -47,8 +33,7 @@ function clearTokens() {
   localStorage.removeItem('cog_user');
 }
 
-/* ── Hosted UI URLs ─────────────────────────────────────────── */
-
+/* Hosted UI URLs  */
 /**
  * Build the Cognito /login URL with OAuth authorisation-code parameters.
  * The user is redirected here from the LandingPage "Sign In" button.
@@ -77,8 +62,6 @@ export function getLogoutUrl() {
   return `https://${config.COGNITO.DOMAIN}/logout?${params.toString()}`;
 }
 
-/* ── Authorisation code → tokens ────────────────────────────── */
-
 /**
  * Exchange an OAuth authorisation code for JWT tokens.
  * Called by App.jsx when it detects ?code= in the URL.
@@ -92,18 +75,15 @@ export async function exchangeCodeForTokens(code) {
     code,
     redirect_uri: config.COGNITO.REDIRECT_URI
   });
-
   const res = await fetch(TOKEN_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: body.toString()
   });
-
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error_description || err.error || 'Token exchange failed');
   }
-
   const data = await res.json();
   const payload = parseJwt(data.id_token);
 
@@ -116,7 +96,7 @@ export async function exchangeCodeForTokens(code) {
   return { user: payload };
 }
 
-/* ── Session validation & refresh ───────────────────────────── */
+/*  Session validation & refresh  */
 
 /**
  * Check whether the user has a valid session.
@@ -182,11 +162,7 @@ export async function getCurrentSession() {
   }
 }
 
-/**
- * Clear local session state.
- * The caller (App.handleLogout) is responsible for redirecting the
- * browser to getLogoutUrl() to also clear the Cognito session cookie.
- */
+
 export function signOut() {
   clearTokens();
 }

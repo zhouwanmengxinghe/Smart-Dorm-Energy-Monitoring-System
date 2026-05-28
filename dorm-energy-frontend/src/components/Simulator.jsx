@@ -1,6 +1,6 @@
 /**
  * Simulator — Publish simulated device telemetry to AWS IoT Core.
- *
+ * Yifu Hou -23009975
  * Two input modes:
  *   1. "By Power"   — user enters power (W), the Lambda auto-calculates
  *      current based on a nominal 230 V reference.

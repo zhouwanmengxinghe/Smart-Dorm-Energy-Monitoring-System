@@ -1,6 +1,6 @@
 /**
  * Header — Top bar shown on every authenticated page.
- *
+ * Yifu Hou -23009975
  * Displays the app name on the left and a user dropdown on the right.
  * The dropdown shows the user's email and a "Sign Out" button that
  * clears local tokens and redirects to the Cognito /logout endpoint.

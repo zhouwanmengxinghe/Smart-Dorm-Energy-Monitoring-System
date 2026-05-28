@@ -1,3 +1,19 @@
+
+
+"""
+GetElectricityData.py — API handler for GET /data.
+Yifu Hou -23009975
+Triggered by: API Gateway (GET /dev/data?limit=N).
+Role: Query the most recent electricity readings from DormElectricData,
+      return them as JSON with timestamp-descending order.
+
+Response: { success: true, count: N, data: [...] }
+Each record: deviceId, timestamp, voltage, current, power,
+             cumulative_energy, is_overload.
+
+IAM Policies: AWSLambdaBasicExecutionRole, AmazonDynamoDBFullAccess.
+"""
+
 import json
 import boto3
 from decimal import Decimal

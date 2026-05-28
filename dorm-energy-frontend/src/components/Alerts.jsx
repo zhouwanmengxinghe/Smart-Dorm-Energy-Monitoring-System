@@ -1,6 +1,6 @@
 /**
  * Alerts — Overload alert history page.
- *
+ * Yifu Hou -23009975
  * Fetches records from the DormAlertHistory DynamoDB table via GET /alerts.
  * Each alert includes the power reading, threshold at the time, voltage,
  * current, and timestamp.
@@ -14,6 +14,13 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { fetchAlertHistory } from '../api';
+
+function toNZTime(isoStr) {
+  if (!isoStr) return '--';
+  try {
+    return new Date(isoStr).toLocaleString('en-NZ', { timeZone: 'Pacific/Auckland' });
+  } catch { return isoStr; }
+}
 
 export default function Alerts() {
   const [alerts, setAlerts] = useState([]);
@@ -107,7 +114,7 @@ export default function Alerts() {
                     const excess = (a?.power ?? 0) - (a?.threshold ?? 0);
                     return (
                       <tr key={a?.alertId || i} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 text-gray-600 whitespace-nowrap font-mono text-xs">{a?.timestamp || '--'}</td>
+                        <td className="px-4 py-3 text-gray-600 whitespace-nowrap font-mono text-xs">{toNZTime(a?.timestamp)}</td>
                         <td className="px-4 py-3 text-right text-red-600 font-bold">{a?.power ?? '--'}</td>
                         <td className="px-4 py-3 text-right text-gray-600">{a?.threshold ?? '--'}</td>
                         {/* Excess shown with a + prefix so it reads naturally as "over by X W" */}

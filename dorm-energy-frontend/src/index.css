@@ -1,10 +1,4 @@
-/**
- * index.css — Tailwind CSS entry point.
- *
- * The @tailwind directives are processed by PostCSS at build time
- * (or on-the-fly in dev mode). Tailwind scans the content globs
- * defined in tailwind.config.js to tree-shake unused utility classes.
- */
+
 
 @tailwind base;
 @tailwind components;

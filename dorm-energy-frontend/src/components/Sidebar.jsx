@@ -1,13 +1,11 @@
 /**
  * Sidebar — Desktop navigation panel (md breakpoint and above).
- *
+ * Yifu Hou -23009975
  * Renders a vertical list of navigation items. The active page is
  * highlighted with a blue background. Each item uses an SVG icon path
  * from Heroicons (rendered inline for simplicity — no icon library
  * dependency).
  *
- * On mobile the sidebar is hidden (display: none below md); the
- * MobileNav bottom tab bar takes over.
  */
 
 import React from 'react';

@@ -1,9 +1,7 @@
 /**
  * api.js — Axios wrapper for the four backend Lambda endpoints.
- *
- * All requests go through AWS API Gateway (no Authorization header —
- * the API Gateway stage has no authorizer configured, by design).
- *
+ * Yifu Hou -23009975
+ * All requests go through AWS API Gateway 
  * Endpoints mirror the Lambda function names:
  *   GET  /data       → GetElectricityData
  *   PUT  /threshold  → UpdateAlertThreshold
@@ -14,7 +12,7 @@
 import axios from 'axios';
 import config from './config';
 
-// Shared Axios instance — base URL + JSON content type for every request
+// Shared Axios instance for every request
 const api = axios.create({
   baseURL: config.API_BASE_URL,
   headers: { 'Content-Type': 'application/json' }

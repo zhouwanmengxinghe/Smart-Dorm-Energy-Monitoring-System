@@ -1,6 +1,6 @@
 /**
  * MobileNav — Bottom tab bar for small screens (below md breakpoint).
- *
+ * Yifu Hou -23009975
  * Complements the Sidebar: Sidebar is hidden on mobile, MobileNav is
  * hidden on desktop. Both read from the same navItems data so they
  * stay in sync without duplicating configuration.

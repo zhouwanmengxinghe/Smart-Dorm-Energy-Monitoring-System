@@ -92,6 +92,21 @@ AS2/
 
 ---
 
+## How to Access the System
+
+ you can access the complete system with:
+
+- The frontend URL http://localhost:5173 （When you run the front-end page locally）
+- A valid Cognito user account created by the project owner
+
+**You do NOT need:** your own AWS account, API keys, database setup,
+or any backend configuration. The frontend already points to the owner's
+AWS cloud backend. Simply open the URL, sign in with the provided
+Cognito account, and all four pages (Dashboard, Simulator, Alert History,
+Settings) are fully accessible.
+
+---
+
 ## Quick Start
 
 ### Prerequisites
