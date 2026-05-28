@@ -134,16 +134,30 @@ export default function Dashboard() {
   const [rawData, setRawData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  // Default threshold matches the backend default (3000W); the actual
-  // dynamic threshold is read from the data (not yet wired to DormSystemSettings).
-  const [threshold] = useState(3000);
-  // useRef for the interval ID so we can clean up on unmount
+  // Read the current threshold from localStorage (saved by Settings page).
+  // Falls back to 3000W when nothing has been persisted yet.
+  const [threshold, setThreshold] = useState(() => {
+    const saved = localStorage.getItem('dorm_threshold');
+    return saved ? parseInt(saved, 10) : 3000;
+  });
   const intervalRef = useRef(null);
+
+  // Sync threshold from localStorage every time the component renders
+  // (Settings may have been updated while on a different page).
+  useEffect(() => {
+    const sync = () => {
+      const saved = localStorage.getItem('dorm_threshold');
+      if (saved) setThreshold(parseInt(saved, 10));
+    };
+    sync();
+    // Listen for cross-tab changes too
+    window.addEventListener('storage', sync);
+    return () => window.removeEventListener('storage', sync);
+  }, []);
 
   const load = useCallback(async () => {
     try {
       const res = await fetchElectricityData(50);
-      // Defensive fallback to empty array if API response shape is unexpected
       const items = res?.data || [];
       setRawData(items);
       setError('');

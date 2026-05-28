@@ -43,7 +43,9 @@ export default function Settings() {
     setOverloadAfterSave(null);
     try {
       const res = await updateThreshold(val);
-      // The Lambda now returns is_overload and current_power in the response
+      // Persist to localStorage so Dashboard chart picks up the new threshold
+      localStorage.setItem('dorm_threshold', String(val));
+      // The Lambda returns is_overload and current_power in the response
       if (res?.is_overload) {
         setOverloadAfterSave({ power: res.current_power, threshold: res.threshold });
         setMessage({
