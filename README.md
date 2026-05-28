@@ -8,35 +8,29 @@ DynamoDB + Cognito + API Gateway, with a React-based web dashboard.
 
 ## System Architecture
 
-Three-layer architecture:
+Layer 1 - DEVICE (Raspberry Pi)
+  aws_iot_publisher.py
+  - Publishes simulated sensor data every 30s via MQTT
+  - Subscribes to shadow delta for power_cutoff commands
+  - Simulates relay power cutoff when overload detected
 
-  [DEVICE LAYER]  Raspberry Pi running aws_iot_publisher.py
-       |          Publishes simulated sensor data every 30s
-       |          Subscribes to shadow delta for power_cutoff
-       |
-       |  MQTT (TLS 1.2, port 8883)
-       v
-  [CLOUD LAYER]  AWS Services
-       |
-       |  IoT Core      -- MQTT Broker + Device Shadow (dorm_energy_shadow)
-       |  Lambda        -- Data processing + API handlers (5 functions)
-       |  DynamoDB      -- DormElectricData / DormSystemSettings / DormAlertHistory
-       |  API Gateway   -- /data /threshold /simulate /alerts
-       |  Cognito       -- Hosted UI OAuth 2.0 login
-       |  SNS           -- Email overload alerts
-       |  CloudWatch    -- Custom metrics + Dashboard
-       |
-       |  HTTPS
-       v
-  [FRONTEND]  React + Vite + Tailwind CSS
-       |
-       |  LandingPage  -- "Sign In with AWS Cognito"
-       |  Dashboard    -- Charts, stats, analytics, data table
-       |  Simulator    -- Custom parameter test tool
-       |  AlertHistory -- Overload event records
-       |  Settings     -- Threshold control + cutoff flow
+Layer 2 - CLOUD (AWS)
+  IoT Core      - MQTT Broker, Device Shadow (dorm_energy_shadow)
+  Lambda        - 5 serverless functions (data processing + API handlers)
+  DynamoDB      - 3 tables: DormElectricData, DormSystemSettings, DormAlertHistory
+  API Gateway   - 4 REST endpoints: /data, /threshold, /simulate, /alerts
+  Cognito       - Hosted UI OAuth 2.0 login (FORCE_CHANGE_PASSWORD built-in)
+  SNS           - Email overload alerts to dorm staff
+  CloudWatch    - Custom metrics (SmartDorm/EnergyMetrics) + Dashboard
 
-Diagram code for mermaid.live: see docs/architecture-diagram.md
+Layer 3 - FRONTEND (Browser)
+  React 18 + Vite + Tailwind CSS
+  Pages: LandingPage, Dashboard, Simulator, AlertHistory, Settings
+
+Data Flow: Device -> MQTT -> IoT Core -> Lambda -> DynamoDB + SNS + CloudWatch
+Web Flow:  Browser -> Cognito Login -> API Gateway -> Lambda -> DynamoDB
+
+Full Mermaid diagram: docs/architecture-diagram.md (paste on mermaid.live)
 
 ---
 
@@ -89,7 +83,7 @@ AS2/
 - Device:        Python + paho-mqtt (MQTT publishing + shadow subscription)
 - Communication: MQTT (TLS 1.2, port 8883)
 - API:           AWS API Gateway (REST, 4 endpoints)
-- Compute:       AWS Lambda (Python 3.9, serverless)
+- Compute:       AWS Lambda (Python 3.14, serverless)
 - Storage:       AWS DynamoDB (NoSQL, 3 tables)
 - Auth:          AWS Cognito Hosted UI (OAuth 2.0 authorization code grant)
 - Messaging:     AWS SNS (email overload alerts)
@@ -104,7 +98,7 @@ AS2/
 ### Prerequisites
 
 - Node.js 18+ and npm
-- Python 3.9+ and pip
+- Python 3.14+ and pip
 - AWS account with: Cognito User Pool, IoT Core Thing + certificates,
   Lambda functions deployed, API Gateway routes, IAM roles
 
@@ -125,12 +119,64 @@ pip install paho-mqtt
 python aws_iot_publisher.py
 ```
 
-### Lambda Deployment
+### Lambda Functions & IAM Permissions
 
-1. Open each .py file in Lambda/ in AWS Lambda Console
-2. Set Runtime: Python 3.9+
-3. Set Timeout: 30 seconds
-4. Click Deploy
+Each Lambda needs an IAM Role. Create one role per function (or a shared
+role with all permissions). Attach the following AWS managed policies:
+
+**ALL Lambdas (common base)**
+- AWSLambdaBasicExecutionRole
+  (writes logs to CloudWatch Logs — required for every function)
+
+**lambda_function.py (main data processor)**
+- AWSLambdaBasicExecutionRole
+- AmazonDynamoDBFullAccess
+  (reads settings, writes sensor data and alert history)
+- AWSIoTDataAccess
+  (UpdateThingShadow + GetThingShadow on IoT Device Shadow)
+- AmazonSNSFullAccess
+  (publishes overload alert emails)
+- CloudWatchFullAccess
+  (publishes custom metrics to SmartDorm/EnergyMetrics namespace)
+
+**GetElectricityData.py (GET /data)**
+- AWSLambdaBasicExecutionRole
+- AmazonDynamoDBFullAccess
+  (queries DormElectricData)
+
+**UpdateAlertThreshold.py (PUT /threshold)**
+- AWSLambdaBasicExecutionRole
+- AmazonDynamoDBFullAccess
+  (writes DormSystemSettings, queries DormElectricData, writes DormAlertHistory)
+- AWSIoTDataAccess
+  (updates shadow when threshold change triggers cutoff)
+- AmazonSNSFullAccess
+  (sends alert if new threshold causes overload)
+
+**SimulateDeviceData.py (POST /simulate)**
+- AWSLambdaBasicExecutionRole
+- AWSIoTDataAccess
+  (publishes simulated MQTT to IoT Core)
+
+**GetAlertHistory.py (GET /alerts)**
+- AWSLambdaBasicExecutionRole
+- AmazonDynamoDBFullAccess
+  (scans DormAlertHistory)
+
+### How to attach policies (AWS Console)
+
+1. IAM Console -> Roles -> Create role
+2. Trusted entity: Lambda
+3. Search and check each policy name (e.g. "AWSLambdaBasicExecutionRole")
+4. Name the role (e.g. "DormEnergy-MainProcessor-Role")
+5. Assign this role to the Lambda in Lambda Console -> Configuration -> Permissions
+
+### Lambda common settings
+
+- Runtime: Python 3.14
+- Architecture: x86_64
+- Timeout: 30 seconds
+- Memory: 128 MB (256 MB for lambda_function.py if processing large batches)
 
 ### Cognito Hosted UI Configuration
 
