@@ -176,7 +176,7 @@ role with all permissions). Attach the following AWS managed policies:
 - Runtime: Python 3.14
 - Architecture: x86_64
 - Timeout: 30 seconds
-- Memory: 128 MB (256 MB for lambda_function.py if processing large batches)
+
 
 ### Cognito Hosted UI Configuration
 
