@@ -155,7 +155,7 @@ export default function Simulator() {
                   value={voltage}
                   onChange={(e) => setVoltage(e.target.value)}
                   placeholder="Enter voltage, e.g. 230"
-                  min="1"
+                  min="1" step="any"
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-800"
                 />
               </div>
