@@ -32,11 +32,12 @@ THING_NAME = "DormRaspberryPi"
 SHADOW_NAME = "dorm_energy_shadow"
 CLIENT_ID = "DormRaspberryPi"
 
-# Shadow MQTT topics
-SHADOW_DELTA_TOPIC = f"$aws/things/{THING_NAME}/shadow/update/delta"
-SHADOW_UPDATE_TOPIC = f"$aws/things/{THING_NAME}/shadow/update"
-SHADOW_GET_TOPIC = f"$aws/things/{THING_NAME}/shadow/get"
-SHADOW_GET_ACCEPTED = f"$aws/things/{THING_NAME}/shadow/get/accepted"
+# Shadow MQTT topics — named shadow "dorm_energy_shadow"
+SHADOW_BASE = f"$aws/things/{THING_NAME}/shadow/name/{SHADOW_NAME}"
+SHADOW_DELTA_TOPIC = f"{SHADOW_BASE}/update/delta"
+SHADOW_UPDATE_TOPIC = f"{SHADOW_BASE}/update"
+SHADOW_GET_TOPIC = f"{SHADOW_BASE}/get"
+SHADOW_GET_ACCEPTED = f"{SHADOW_BASE}/get/accepted"
 
 # Certificate files (must be in the same directory)
 CA_FILE = "AmazonRootCA1.pem"
