@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<!--
+  Smart Dorm Energy Monitor — entry HTML.
+  The #root div is the React mount point.
+  No polyfills or inline scripts are needed because all auth uses
+  browser-native fetch + Web Crypto API; no Node.js globals required.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Smart Dorm Energy Monitor</title>
+  </head>
+  <body class="bg-gray-50">
+    <div id="root"></div>
+    <!-- Vite injects the bundled JS/CSS here -->
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
