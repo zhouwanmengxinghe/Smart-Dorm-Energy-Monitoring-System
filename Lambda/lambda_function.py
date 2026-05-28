@@ -8,6 +8,7 @@ from decimal import Decimal
 dynamodb = boto3.resource('dynamodb')
 iot_client = boto3.client('iot-data', region_name='ap-southeast-2')
 sns_client = boto3.client('sns', region_name='ap-southeast-2')
+cloudwatch = boto3.client('cloudwatch', region_name='ap-southeast-2')
 
 # DynamoDB table names
 DATA_TABLE_NAME = 'DormElectricData'
@@ -136,6 +137,62 @@ def update_device_shadow(is_overload):
         print(f"Failed to update device shadow: {e}")
 
 
+def publish_metrics(voltage, current, power, is_overload, threshold):
+    """
+    Publish custom metrics to CloudWatch for the analytics dashboard.
+
+    Namespace: SmartDorm/EnergyMetrics
+    Metrics published:
+      - Power      (Watts)
+      - Current    (Amps)
+      - Voltage    (Volts)
+      - Overload   (1 = overload, 0 = normal)
+      - Threshold  (Watts)
+
+    These metrics appear in the CloudWatch Dashboard and can trigger
+    CloudWatch Alarms independently of the SNS email path.
+    """
+    try:
+        cloudwatch.put_metric_data(
+            Namespace='SmartDorm/EnergyMetrics',
+            MetricData=[
+                {
+                    'MetricName': 'Power',
+                    'Value': power,
+                    'Unit': 'Watts',
+                    'Timestamp': datetime.utcnow()
+                },
+                {
+                    'MetricName': 'Current',
+                    'Value': current,
+                    'Unit': 'Amps',
+                    'Timestamp': datetime.utcnow()
+                },
+                {
+                    'MetricName': 'Voltage',
+                    'Value': voltage,
+                    'Unit': 'Volts',
+                    'Timestamp': datetime.utcnow()
+                },
+                {
+                    'MetricName': 'Overload',
+                    'Value': 1 if is_overload else 0,
+                    'Unit': 'Count',
+                    'Timestamp': datetime.utcnow()
+                },
+                {
+                    'MetricName': 'Threshold',
+                    'Value': threshold,
+                    'Unit': 'Watts',
+                    'Timestamp': datetime.utcnow()
+                }
+            ]
+        )
+        print("CloudWatch metrics published")
+    except Exception as e:
+        print(f"Failed to publish CloudWatch metrics: {e}")
+
+
 def lambda_handler(event, context):
     try:
         print(f"Received event: {json.dumps(event)}")
@@ -177,6 +234,7 @@ def lambda_handler(event, context):
                 item = convert_floats_to_decimals(item)
                 data_table.put_item(Item=item)
                 update_device_shadow(is_overload)
+                publish_metrics(voltage, current, power, is_overload, threshold)
                 return {
                     'statusCode': 200,
                     'body': json.dumps({
@@ -198,6 +256,9 @@ def lambda_handler(event, context):
 
         # Update device shadow — includes power_cutoff flag when overloaded
         update_device_shadow(is_overload)
+
+        # Publish analytics metrics to CloudWatch
+        publish_metrics(voltage, current, power, is_overload, threshold)
 
         # If overload, send alert and log to history
         if is_overload:
