@@ -130,7 +130,7 @@ export default function Simulator() {
                 value={power}
                 onChange={(e) => setPower(e.target.value)}
                 placeholder="Enter power, e.g. 3000"
-                min="1"
+                min="1" step="any"
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-800"
               />
               <p className="text-xs text-gray-400 mt-1">Current auto-calculated from 230V reference</p>
@@ -144,7 +144,7 @@ export default function Simulator() {
                   value={current}
                   onChange={(e) => setCurrent(e.target.value)}
                   placeholder="Enter current, e.g. 10"
-                  min="0.1"
+                  min="0.1" step="any"
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-800"
                 />
               </div>
