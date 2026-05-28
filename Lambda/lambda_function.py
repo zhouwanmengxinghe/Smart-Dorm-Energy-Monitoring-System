@@ -159,19 +159,19 @@ def publish_metrics(voltage, current, power, is_overload, threshold):
                 {
                     'MetricName': 'Power',
                     'Value': power,
-                    'Unit': 'Watts',
+                    'Unit': 'None',
                     'Timestamp': datetime.utcnow()
                 },
                 {
                     'MetricName': 'Current',
                     'Value': current,
-                    'Unit': 'Amps',
+                    'Unit': 'None',
                     'Timestamp': datetime.utcnow()
                 },
                 {
                     'MetricName': 'Voltage',
                     'Value': voltage,
-                    'Unit': 'Volts',
+                    'Unit': 'None',
                     'Timestamp': datetime.utcnow()
                 },
                 {
@@ -183,7 +183,7 @@ def publish_metrics(voltage, current, power, is_overload, threshold):
                 {
                     'MetricName': 'Threshold',
                     'Value': threshold,
-                    'Unit': 'Watts',
+                    'Unit': 'None',
                     'Timestamp': datetime.utcnow()
                 }
             ]
