@@ -156,29 +156,55 @@ def lambda_handler(event, context):
                     'body': json.dumps({'error': f'Missing required field: {field}'})
                 }
 
-        # Get dynamic threshold from settings
+        voltage = event['voltage']
+        current = event['current']
+        power = event['power']
         threshold = get_overload_threshold()
 
-        # Check for overload
-        is_overload = event['power'] > threshold
+        # ── Zero-reading guard ───────────────────────────────────
+        # When the device cuts power, it publishes (0V, 0A, 0W).
+        # If we re-evaluate (0W > threshold) → False, we'd undo the
+        # cutoff before the user has a chance to fix the root cause,
+        # creating a rapid on/off cycle.  Instead, when we see a
+        # zero reading, maintain the existing cutoff state.
+        # The cutoff is ONLY lifted when the user raises the threshold
+        # via the web dashboard → UpdateAlertThreshold Lambda.
+        is_device_cutoff = (voltage < 1.0 and current < 1.0 and power < 1.0)
+        if is_device_cutoff:
+            # Read the current shadow to check whether it's in cutoff
+            shadow_doc = get_shadow_document()
+            desired = shadow_doc.get('state', {}).get('desired', {})
+            reported = shadow_doc.get('state', {}).get('reported', {})
+            cutoff_state = desired.get('power_cutoff', reported.get('power_cutoff', 'false'))
+            if cutoff_state == 'true':
+                print("Device is in cutoff state (zero readings) — maintaining cutoff, skipping overload evaluation")
+                is_overload = True  # preserve cutoff
+                # Still write the zero reading so the Dashboard shows 0 power
+                item = build_item(voltage, current, power, event['cumulative_energy'], is_overload)
+                item = convert_floats_to_decimals(item)
+                data_table.put_item(Item=item)
+                update_device_shadow(power, threshold, is_overload, item['timestamp'])
+                return {
+                    'statusCode': 200,
+                    'body': json.dumps({
+                        'success': True,
+                        'message': 'Zero reading — cutoff maintained',
+                        'is_overload': is_overload,
+                        'threshold': threshold
+                    })
+                }
+
+        # ── Normal overload evaluation ──────────────────────────
+        is_overload = power > threshold
 
         # Build DynamoDB item
-        item = {
-            'deviceId': THING_NAME,
-            'timestamp': datetime.utcnow().isoformat() + 'Z',
-            'voltage': round(event['voltage'], 1),
-            'current': round(event['current'], 2),
-            'power': round(event['power'], 2),
-            'cumulative_energy': round(event['cumulative_energy'], 4),
-            'is_overload': is_overload
-        }
-
+        item = build_item(voltage, current, power, event['cumulative_energy'], is_overload)
         item = convert_floats_to_decimals(item)
         data_table.put_item(Item=item)
         print(f"Data written to DynamoDB: {item}")
 
         # Update device shadow — includes power_cutoff flag when overloaded
-        update_device_shadow(event['power'], threshold, is_overload, item['timestamp'])
+        update_device_shadow(power, threshold, is_overload, item['timestamp'])
 
         # If overload, send alert and log to history
         if is_overload:
@@ -202,3 +228,29 @@ def lambda_handler(event, context):
             'statusCode': 500,
             'body': json.dumps({'error': str(e)})
         }
+
+
+def get_shadow_document():
+    """Read the current named shadow document from IoT Core."""
+    try:
+        resp = iot_client.get_thing_shadow(
+            thingName=THING_NAME,
+            shadowName=SHADOW_NAME
+        )
+        return json.loads(resp['payload'].read())
+    except Exception as e:
+        print(f"Failed to read shadow: {e}")
+        return {}
+
+
+def build_item(voltage, current, power, cumulative_energy, is_overload):
+    """Construct a DynamoDB item dict (not yet Decimal-converted)."""
+    return {
+        'deviceId': THING_NAME,
+        'timestamp': datetime.utcnow().isoformat() + 'Z',
+        'voltage': round(voltage, 1),
+        'current': round(current, 2),
+        'power': round(power, 2),
+        'cumulative_energy': round(cumulative_energy, 4),
+        'is_overload': is_overload
+    }
