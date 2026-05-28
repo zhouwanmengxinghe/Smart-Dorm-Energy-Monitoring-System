@@ -8,19 +8,27 @@ MQTT_TOPIC = 'dorm/electricity/data'
 
 def lambda_handler(event, context):
     try:
-        # Parse request body (optional power parameter)
         body = {}
         if event.get('body'):
             body = json.loads(event.get('body', '{}'))
 
         custom_power = body.get('power')
+        custom_current = body.get('current')
+        custom_voltage = body.get('voltage')
 
-        # Generate simulated data
-        voltage = round(random.uniform(228.0, 232.0), 1)
+        # Use custom voltage if provided, otherwise random 228-232V
+        if custom_voltage is not None:
+            voltage = round(float(custom_voltage), 1)
+        else:
+            voltage = round(random.uniform(228.0, 232.0), 1)
 
+        # Determine power and current from whichever parameter was provided
         if custom_power is not None:
             power = float(custom_power)
             current = round(power / voltage, 2)
+        elif custom_current is not None:
+            current = float(custom_current)
+            power = round(voltage * current, 2)
         else:
             current = round(random.uniform(0.5, 4.5), 2)
             power = round(voltage * current, 2)
