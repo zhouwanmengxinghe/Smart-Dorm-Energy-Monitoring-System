@@ -175,7 +175,7 @@ def publish_sensor_data(client):
         power = 0.0
     else:
         voltage = round(random.uniform(228.0, 232.0), 1)
-        current = round(random.uniform(0.5, 4.5), 2)
+        current = round(random.uniform(0.5, 15), 2)
         power = round(voltage * current, 2)
         cumulative_energy += round(power * 30 / 3600000, 4)
 

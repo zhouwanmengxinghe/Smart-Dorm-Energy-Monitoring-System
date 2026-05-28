@@ -228,6 +228,41 @@ export default function Dashboard() {
         ))}
       </div>
 
+      {/* ── Analytics row — computed from all loaded data points ──── */}
+      {rawData.length > 0 && (() => {
+        const powers = rawData.map(d => d?.power ?? 0);
+        const avgPower = powers.reduce((a, b) => a + b, 0) / powers.length;
+        const maxPower = Math.max(...powers);
+        const overloadCount = rawData.filter(d => d?.is_overload).length;
+        const margin = threshold - (latest?.power ?? 0);
+        return (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <p className="text-xs text-gray-500 mb-1">Max Power</p>
+              <p className="text-xl font-bold text-orange-600">{maxPower.toFixed(0)} <span className="text-xs font-normal text-gray-400">W</span></p>
+              <p className="text-xs text-gray-400 mt-0.5">in current window</p>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <p className="text-xs text-gray-500 mb-1">Average Power</p>
+              <p className="text-xl font-bold text-blue-600">{avgPower.toFixed(0)} <span className="text-xs font-normal text-gray-400">W</span></p>
+              <p className="text-xs text-gray-400 mt-0.5">over {rawData.length} readings</p>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <p className="text-xs text-gray-500 mb-1">Overload Events</p>
+              <p className="text-xl font-bold text-red-600">{overloadCount} <span className="text-xs font-normal text-gray-400">/{rawData.length}</span></p>
+              <p className="text-xs text-gray-400 mt-0.5">{overloadCount > 0 ? `${((overloadCount / rawData.length) * 100).toFixed(0)}% of readings` : 'No overload'}</p>
+            </div>
+            <div className={`bg-white rounded-xl border p-4 ${margin < 0 ? 'border-red-200' : 'border-gray-200'}`}>
+              <p className="text-xs text-gray-500 mb-1">Power Margin</p>
+              <p className={`text-xl font-bold ${margin < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                {margin > 0 ? '+' : ''}{margin.toFixed(0)} <span className="text-xs font-normal text-gray-400">W</span>
+              </p>
+              <p className="text-xs text-gray-400 mt-0.5">{margin < 0 ? 'Over threshold!' : 'Below threshold'}</p>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Charts section — three states: loading, empty, data */}
       {loading && rawData.length === 0 ? (
         <div className="text-center py-20 text-gray-400">Loading...</div>
