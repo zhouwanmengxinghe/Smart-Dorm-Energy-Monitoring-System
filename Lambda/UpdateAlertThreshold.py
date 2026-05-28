@@ -47,28 +47,19 @@ def get_latest_data():
     return items[0] if items else None
 
 
-def update_device_shadow(power, threshold, is_overload, timestamp):
+def update_device_shadow(is_overload):
     """
-    Push the current reading + power-cutoff command to the IoT device shadow.
+    Publish a power_cutoff command to the IoT device shadow.
 
-    Shadow structure:
-      desired.power_cutoff  — "true" when the device should cut power
-      reported.current_power — latest power reading
-      reported.threshold     — active threshold
-      reported.is_overload   — "true"/"false"
-      reported.last_update   — ISO timestamp
+    Only the "desired" section is written.  The "reported" section is
+    owned by the device — it confirms execution by publishing its own
+    state after acting on the desired delta.
     """
     try:
         shadow_payload = {
             "state": {
                 "desired": {
                     "power_cutoff": "true" if is_overload else "false"
-                },
-                "reported": {
-                    "current_power": str(round(power, 2)),
-                    "threshold": str(round(threshold, 2)),
-                    "is_overload": str(is_overload).lower(),
-                    "last_update": timestamp
                 }
             }
         }
@@ -186,7 +177,7 @@ def lambda_handler(event, context):
             is_overload = current_power > threshold
 
             # Push shadow update so the device can act on the new threshold
-            update_device_shadow(current_power, threshold, is_overload, timestamp)
+            update_device_shadow(is_overload)
 
             # If the threshold change causes a *new* overload, send alert + log
             if is_overload:

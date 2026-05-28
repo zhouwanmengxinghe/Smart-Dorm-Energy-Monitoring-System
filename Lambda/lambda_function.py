@@ -107,29 +107,22 @@ def log_alert_to_history(item):
         print(f"Failed to log alert: {e}")
 
 
-def update_device_shadow(power, threshold, is_overload, timestamp):
+def update_device_shadow(is_overload):
     """
-    Update IoT device shadow with latest readings AND power-cutoff command.
+    Publish a power_cutoff command to the IoT device shadow.
 
-    The shadow has two sections:
-      desired  — commands the device should act on (power_cutoff)
-      reported — the device's current known state
-
-    When is_overload is True, desired.power_cutoff is set to "true".
-    The device (Raspberry Pi) subscribes to shadow delta events and
-    should physically cut power when it sees this flag.
+    IMPORTANT: Only the "desired" section is written here.
+    The "reported" section belongs to the device — it confirms
+    execution by publishing to shadow/update after acting on
+    the desired state.  If the Lambda also wrote "reported",
+    it would overwrite the device's confirmation and break
+    shadow delta delivery.
     """
     try:
         shadow_payload = {
             "state": {
                 "desired": {
                     "power_cutoff": "true" if is_overload else "false"
-                },
-                "reported": {
-                    "current_power": str(round(power, 2)),
-                    "threshold": str(round(threshold, 2)),
-                    "is_overload": str(is_overload).lower(),
-                    "last_update": timestamp
                 }
             }
         }
@@ -183,7 +176,7 @@ def lambda_handler(event, context):
                 item = build_item(voltage, current, power, event['cumulative_energy'], is_overload)
                 item = convert_floats_to_decimals(item)
                 data_table.put_item(Item=item)
-                update_device_shadow(power, threshold, is_overload, item['timestamp'])
+                update_device_shadow(is_overload)
                 return {
                     'statusCode': 200,
                     'body': json.dumps({
@@ -204,7 +197,7 @@ def lambda_handler(event, context):
         print(f"Data written to DynamoDB: {item}")
 
         # Update device shadow — includes power_cutoff flag when overloaded
-        update_device_shadow(power, threshold, is_overload, item['timestamp'])
+        update_device_shadow(is_overload)
 
         # If overload, send alert and log to history
         if is_overload:
