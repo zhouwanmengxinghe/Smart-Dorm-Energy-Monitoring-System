@@ -1,3 +1,5 @@
+English | [简体中文](README.zh-CN.md)
+
 # Smart Dorm Energy Monitoring System
 
 An IoT + Cloud integrated solution for real-time dormitory electricity monitoring,
